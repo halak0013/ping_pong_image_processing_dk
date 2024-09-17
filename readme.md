@@ -10,6 +10,8 @@ Proje içinde shift+ctrl+p basıp `Python: Create Environment...` yazıp sanal b
 
 Sonrasında PingPong.py dosyası açılıp sağ alttan sanal ortamın seçilmesi gerekiyor.
 
+![alt](/resources/image.png)
+
 Sonrasında bağımlılıkları yüklemek için
 
 `pip install -r requirements.txt`
