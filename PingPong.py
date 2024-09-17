@@ -1,0 +1,215 @@
+# Bismillahirnirahim
+
+import random
+import cv2
+import cvzone.HandTrackingModule as htm
+import pygame
+from dk_connection import ImageReceiver, SocketServer
+import Collision
+import Ball
+import panels
+import time
+
+
+class PingPong:
+    def __init__(self, target_width=1920, target_height=1080, detection_confidence=0.40, max_hands=2) -> None:
+        self.target_width = target_width
+        self.target_height = target_height
+        self.detection_confidence = detection_confidence
+        self.max_hands = max_hands
+
+        self.cap = cv2.VideoCapture(0)
+        self.cap.set(3, self.target_width)
+        self.cap.set(4, self.target_height)
+
+        self.img_background = self.resize_img(cv2.imread(
+            "resources/background.png"), self.target_width, self.target_height)
+        self.img_ball = self.resize_img(cv2.imread(
+            "resources/ball.png", cv2.IMREAD_UNCHANGED), 40, 40)
+        self.img_left_bat = self.resize_img(cv2.imread(
+            "resources/left_bat.png", cv2.IMREAD_UNCHANGED), 24, 150)
+        self.img_right_bat = self.resize_img(cv2.imread(
+            "resources/right_bat.png", cv2.IMREAD_UNCHANGED), 24, 150)
+        self.img_menu = self.resize_img(cv2.imread(
+            "resources/menu.png", cv2.IMREAD_UNCHANGED), 640, 360)
+        self.img_obstacle = self.resize_img(cv2.imread(
+            "resources/engel.png", cv2.IMREAD_UNCHANGED), 75, 75)
+
+        pygame.mixer.init()
+
+        self.shot_sound = pygame.mixer.Sound("resources/shot.wav")
+        self.fail_sound = pygame.mixer.Sound("resources/fail.wav")
+
+        self.detector = htm.HandDetector(
+            maxHands=self.max_hands, detectionCon=self.detection_confidence)
+
+        bl, bu = 50, 60
+        self.boundries = {
+            "left": bl,
+            "right": self.target_width - bl,
+            "top": bu,
+            "bottom": self.target_height - bu*2
+        }
+
+        self.scores = {"left": 0, "right": 0}
+
+        self.hx, self.hy = 0, 0
+
+        self.bats = {"left_bat": Collision.Collision(self.img_left_bat, is_bat=True),
+                     "right_bat": Collision.Collision(self.img_right_bat, is_bat=True), }
+
+        self.objects = {
+            "up": Collision.Collision(width=self.target_width, height=bu, x=0, y=0),
+            "down": Collision.Collision(width=self.target_width, height=bu, x=0, y=self.target_height-bu),
+            "left": Collision.Collision(width=bl, height=self.target_height, x=0, y=0),
+            "right": Collision.Collision(width=bl, height=self.target_height, x=self.target_width-bl, y=0),
+            "obstacle1": Collision.Collision(self.img_obstacle, x=-10, y=-10),
+            "obstacle2": Collision.Collision(self.img_obstacle, x=-10, y=-10),
+        }
+        # Referansları içeren liste
+        self.collisions = [{key: val.bounding_box}
+                           for key, val in self.objects.items()]
+        self.collisions.extend(
+            [{key: val.bounding_box} for key, val in self.bats.items()])
+        self.ball = Ball.Ball(self.img_ball, (self.target_width//2,
+                                              self.target_height//2), self.scores)
+        self.panel = panels.Panels()
+
+        self.sock_server = SocketServer()
+        self.image_receiver = ImageReceiver(self.sock_server)
+
+        self.game_time = 120
+        self.obs_time = 15
+        self.now = time.time()
+        self.hand_free_time = 0
+
+    def resize_img(self, img: cv2.typing.MatLike, width, height):
+        return cv2.resize(img, (width, height))
+
+    def get_img(self, source="camera"):
+        img = None
+        succes = None
+        if source == "sock":
+            img = self.image_receiver.get_image()
+            succes = img is not None
+        else:
+            succes, img = self.cap.read()
+        return succes, img
+
+    def draw_hand_pose(self, img: cv2.typing.MatLike, hands: list):
+        if hands:
+            self.hand_free_time = 0
+            for hand in hands:
+                x, y, w, h = hand["bbox"]
+                x2, y2 = x+w//2, y+h//2  # hand center
+                self.hx, self.hy = x2, y2
+                # TODO: renk tespiti ile raket de yapılabilir
+                if hand["type"] == "Right" and x2 > self.target_width//2:
+                    img = self.bats["right_bat"].draw(
+                        img=img, x=x2, y=y2, bound_x=self.boundries["right"] - 20)
+                    img = cv2.circle(img, (x2, y2), 9, (255, 0, 0), cv2.FILLED)
+                elif hand["type"] == "Left" and x2 < self.target_width//2:
+                    img = self.bats["left_bat"].draw(
+                        img=img, x=x2, y=y2, bound_x=self.boundries["left"] + 20)
+                    img = cv2.circle(img, (x2, y2), 9, (0, 0, 255), cv2.FILLED)
+        else:
+            self.hand_free_time += 1
+            print("Hand free time: ", self.hand_free_time)
+        return img
+
+    def draw_score(self, img: cv2.typing.MatLike):
+        space = 100
+        text = f"Left: {self.scores['left']}"
+        font = cv2.FONT_HERSHEY_SCRIPT_COMPLEX
+        font_scale = 1
+        font_color = (255, 0, 0)
+        thickness = 1
+        # Yazının boyutunu hesapla
+        (text_width, text_height), baseline = cv2.getTextSize(
+            text, font, font_scale, thickness)
+
+        # Yazıyı yerleştirmek için dinamik bir konum belirle
+        x = (self.target_width // 2) - (text_width)
+        # Y ekseninde biraz boşluk bırak
+        y = (text_height + baseline) + self.boundries["top"]
+
+        cv2.putText(img, text, (x, y), font, font_scale, font_color, thickness)
+
+        cv2.putText(img, f"Right: {self.scores['right']}", (self.target_width//2 + space, y),
+                    font, font_scale, (0, 0, 255), thickness)
+        return img
+
+    def reset_time(self):
+        self.now = time.time()
+        self.hand_free_time = 0
+
+    def draw_time(self, img: cv2.typing.MatLike) -> cv2.typing.MatLike:
+        time_left = self.game_time - (time.time() - self.now)
+        if time_left <= 0 or self.hand_free_time > 100:
+            self.ball.pause()
+            img = self.panel.draw_exit(img, self.img_menu, self.hx, self.hy,
+                                       self.ball.restart, self.ball.resume, self.reset_time,
+                                       "Süre Bitti\nTekrar Başlamak İçin Butona Elinizi getirin")
+            time_left = 0
+        font = cv2.FONT_HERSHEY_SCRIPT_COMPLEX
+        font_scale = 1
+        font_color = (0, 255, 0)
+        thickness = 1
+        text = f"Time: {int(time_left)}"
+        (text_width, text_height), baseline = cv2.getTextSize(
+            text, font, font_scale, thickness)
+        x = (self.target_width // 2) - (text_width // 2)
+        y = (text_height + baseline) + self.boundries["top"] + 200
+        cv2.putText(img, text, (x, y), font, font_scale, font_color, thickness)
+
+        return img
+
+    def draw_obstacle(self):
+        if (time.time() - self.now) % self.obs_time < 2:
+            self.o1_x = random.randint(100, self.target_width-100)
+            self.o1_y = random.randint(100, self.target_height-100)
+            self.o2_x = random.randint(100, self.target_width-100)
+            self.o2_y = random.randint(100, self.target_height-100)
+        self.objects["obstacle1"].x=self.o1_x
+        self.objects["obstacle1"].y=self.o1_y
+        self.objects["obstacle2"].x=self.o2_x
+        self.objects["obstacle2"].y=self.o2_y
+
+    def draw_components(self, img: cv2.typing.MatLike, hands: list):
+        img = cv2.addWeighted(
+            img, alpha=0.2, src2=self.img_background, beta=1, gamma=0)
+
+        img = self.draw_hand_pose(img, hands)
+        for obj in self.objects.values():
+            img = obj.draw(img, obj.x, obj.y)
+        self.ball.move(img, self.collisions)
+        self.draw_obstacle()
+        img = self.draw_score(img)
+        img = self.draw_time(img)
+
+        return img
+
+    def run(self):
+        print("running")
+        while True:
+            #success, img = self.cap.read()
+            success, img = self.get_img("sock")
+            if not success:
+                print("Failed to read from camera")
+                break
+            img: cv2.typing.MatLike = cv2.flip(img, 1)
+            img = cv2.resize(img, (self.target_width, self.target_height))
+            hands, img = self.detector.findHands(img, flipType=False)
+
+            img = self.draw_components(img, hands)
+
+            cv2.imshow("Image", img)
+            if cv2.waitKey(5) & 0xFF == 27:  # ord('q')
+                break
+        self.cap.release()
+        cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    app = PingPong()
+    app.run()
