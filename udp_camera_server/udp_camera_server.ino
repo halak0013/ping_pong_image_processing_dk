@@ -2,7 +2,7 @@
 #include <WiFiUdp.h>
 #include "esp_camera.h"
 
-const char* ssid = "EYUP DENEYAP";
+const char* ssid = "xxxxxxxx";
 const char* password = "xxxxxx";
 const char* udpAddress = "192.168.x.x";  // UDP istemcisinin IP adresi
 const int udpPort = 12345;  // UDP portu
