@@ -11,7 +11,7 @@ import time
 
 
 class PingPong:
-    def __init__(self, target_width=1920, target_height=1080, detection_confidence=0.40, max_hands=2) -> None:
+    def __init__(self, target_width=1080, target_height=720, detection_confidence=0.40, max_hands=2) -> None:
         self.target_width = target_width
         self.target_height = target_height
         self.detection_confidence = detection_confidence
@@ -76,6 +76,7 @@ class PingPong:
         self.obs_time = 15
         self.now = time.time()
         self.hand_free_time = 0
+        self.is_hand_free = False
 
     def resize_img(self, img: cv2.typing.MatLike, width, height):
         return cv2.resize(img, (width, height))
@@ -136,10 +137,13 @@ class PingPong:
         self.now = time.time()
         self.hand_free_time = 0
         self.scores = {"left": 0, "right": 0}
+        self.is_hand_free = False
 
     def draw_time(self, img: cv2.typing.MatLike) -> cv2.typing.MatLike:
         time_left = self.game_time - (time.time() - self.now)
-        if time_left <= 0 or self.hand_free_time > 100:
+        if self.hand_free_time > 100:
+            self.is_hand_free =True
+        if time_left <= 0 or self.is_hand_free:
             self.ball.pause()
             img = self.panel.draw_exit(img, self.img_menu, self.hx, self.hy,
                                        self.ball.restart, self.ball.resume, self.reset_time,

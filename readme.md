@@ -10,7 +10,9 @@ Proje içinde shift+ctrl+p basıp `Python: Create Environment...` yazıp sanal b
 
 Sonrasında PingPong.py dosyası açılıp sağ alttan sanal ortamın seçilmesi gerekiyor.
 
-![alt](/resources/image.png)
+<img src="resources/doc/game.png" height=200>
+
+![alt](resources/image.png)
 
 Sonrasında bağımlılıkları yüklemek için
 
