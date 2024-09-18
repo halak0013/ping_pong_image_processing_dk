@@ -42,10 +42,52 @@ class Ball:
         self.dx = 0
         self.dy = 0
 
+    def collision_detection(self, bounding_box) -> bool:
+        top = bounding_box["top"]
+        bottom = bounding_box["bottom"]
+        right = bounding_box["right"]
+        left = bounding_box["left"]
+
+        print(f"Ball: {self.x}, {self.y} speed: {self.dx}, {self.dy}")
+        #bouncing - > self
+        #rectangle -> top, right
+
+        # Sağ ve sol çarpışma kontrolü
+        if self.x + self.radius + self.dx > left and self.x < right:
+            if self.y + self.radius + self.dy > top and self.y + self.dy < bottom:
+                # X ekseninde çarpışma durumu
+                self.dx *= -1
+                self.x += self.dx
+                print("sağ, sol")
+                return True
+
+        # Üst ve alt çarpışma kontrolü
+        if self.x + self.radius > left and self.x < right:
+            if self.y + self.radius + self.dy > top and self.y + self.dy < bottom:
+            # Y ekseninde çarpışma durumu
+                self.dy *= -1
+                self.y += self.dy
+                print("üst, alt")
+                return True
+
+        # Sağ ve sol çarpışma kontrolü
+        #if self.x + self.radius + self.dx > left and self.x + self.dx < right:
+        #    if self.y + self.radius > top and self.y < bottom:
+        #        # X ekseninde çarpışma durumu
+        #        self.dx *= -1
+        #        self.x += self.dx
+        #        print("sağ, sol")
+        #        return True
+            
+        
+
+        return False
+    
     def get_sign(self, num):
         return 1 if num > 0 else -1
     
     def collision_detection2(self, bounding_box, img: cv2.typing.MatLike) -> bool:
+            
         obs_top = bounding_box["top"]
         obs_bottom = bounding_box["bottom"]
         obs_right = bounding_box["right"]
@@ -53,68 +95,60 @@ class Ball:
 
         def chech_all_collision(x, y):
             return x >= obs_left and x <= obs_right and y >= obs_top and y <= obs_bottom
-
+        #sağ kortol
         ofset = 10
-        # Çarpışma tespiti yapılır yapılmaz tüm döngülerin gereksiz çalışmasını önlemek için bir bayrak kullanabiliriz.
-        collision_detected = False
-
-        # Sağ kontrol
         for r in range(abs(self.dx)):
             r += 1
             val = self.x + self.radius + r * self.get_sign(self.dx)
-            if chech_all_collision(val, self.y):
+            if val >= obs_left and chech_all_collision(val, self.y):
                 cv2.circle(img, (val, self.y), 3, (0,255,0),cv2.FILLED)
                 self.dx *= -1
                 self.x += self.get_sign(self.dx) * ofset
                 self.y += self.get_sign(self.dy) * ofset
-                collision_detected = True
-                print(f"Ball: {self.x}, {self.y} speed: {self.dx}, {self.dy} - Sağ çarpışma")
-                break  # Çarpışma tespit edildiğinde döngüyü kırıyoruz
+                print(f"Ball: {self.x}, {self.y} speed: {self.dx}, {self.dy}")
+                print("sağ")
+                return True
         
-        # Sol kontrol
-        if not collision_detected:  # Eğer çarpışma gerçekleşmemişse
-            for l in range(abs(self.dx)):
-                l += 1
-                val = self.x + l * self.get_sign(self.dx)
-                if chech_all_collision(val, self.y):
-                    cv2.circle(img, (val, self.y), 3, (0,255,0),cv2.FILLED)
-                    self.dx *= -1
-                    self.x += self.get_sign(self.dx) * ofset
-                    self.y += self.get_sign(self.dy) * ofset
-                    collision_detected = True
-                    print(f"Ball: {self.x}, {self.y} speed: {self.dx}, {self.dy} - Sol çarpışma")
-                    break
-
-        # Yukarı kontrol
-        if not collision_detected:
-            for t in range(abs(self.dy)):
-                t += 1
-                val = self.y - 10 + t * self.get_sign(self.dy)
-                if chech_all_collision(self.x, val):
-                    cv2.circle(img, (self.x, val), 3, (0,255,0),cv2.FILLED)
-                    self.dy *= -1
-                    self.x += self.get_sign(self.dx) * ofset
-                    self.y += self.get_sign(self.dy) * ofset
-                    collision_detected = True
-                    print(f"Ball: {self.x}, {self.y} speed: {self.dx}, {self.dy} - Üst çarpışma")
-                    break
-
-        # Aşağı kontrol
-        if not collision_detected:
-            for b in range(abs(self.dy)):
-                b += 1
-                val = self.y + self.radius + b * self.get_sign(self.dy)
-                if chech_all_collision(self.x, val):
-                    cv2.circle(img, (self.x, val), 3, (0,255,0),cv2.FILLED)
-                    self.dy *= -1
-                    self.x += self.get_sign(self.dx) * ofset
-                    self.y += self.get_sign(self.dy) * ofset
-                    collision_detected = True
-                    print(f"Ball: {self.x}, {self.y} speed: {self.dx}, {self.dy} - Alt çarpışma")
-                    break
-
-        return collision_detected
-
+        #sol kontrol
+        for l in range(abs(self.dx)):
+            l+=1
+            val = self.x + l * self.get_sign(self.dx)
+            if val <= obs_right and chech_all_collision(val, self.y):
+                cv2.circle(img, (val, self.y), 3, (0,255,0),cv2.FILLED)
+                self.dx *= -1
+                self.x += self.get_sign(self.dx) * ofset
+                self.y += self.get_sign(self.dy) * ofset
+                print(f"Ball: {self.x}, {self.y} speed: {self.dx}, {self.dy}")
+                print("sol")
+                return True
+        
+        #yukarı kontrol
+        for t in range(abs(self.dy)):
+            t += 1
+            val = self.y - 10 + t * self.get_sign(self.dy)
+            if val <= obs_bottom and chech_all_collision(self.x, val):
+                cv2.circle(img, (self.x, val), 3, (0,255,0),cv2.FILLED)
+                self.dy *= -1
+                self.x += self.get_sign(self.dx) * ofset
+                self.y += self.get_sign(self.dy) * ofset
+                print(f"Ball: {self.x}, {self.y} speed: {self.dx}, {self.dy}")
+                print("üst")
+                return True
+        
+        #aşağı kontrol
+        for b in range(abs(self.dy)):
+            b += 1
+            val = self.y + self.radius + b * self.get_sign(self.dy)
+            if val >= obs_top and chech_all_collision(self.x, val):
+                cv2.circle(img, (self.x ,val), 3, (0,255,0),cv2.FILLED)
+                self.dy *= -1
+                self.x += self.get_sign(self.dx) * ofset
+                self.y += self.get_sign(self.dy) * ofset
+                print(f"Ball: {self.x}, {self.y} speed: {self.dx}, {self.dy}")
+                print("alt")
+                return True
+        
+        return False
 
 
 
@@ -141,19 +175,19 @@ class Ball:
                     if key == "right":
                         self.scores["right"] -= 2
                         self.scores["left"] += 1
-                        self.fail_sound.play()
+                        #self.fail_sound.play()
                         self.restart()
                     elif key == "left":
                         self.scores["left"] -= 2
                         self.scores["right"] += 1
-                        self.fail_sound.play()
+                        #self.fail_sound.play()
                         self.restart()
                     elif key == "right_bat":
                         self.scores["right"] += 2
                         self.increase_speed()
-                        self.shot_sound.play()
+                        #self.shot_sound.play()
                     elif key == "left_bat":
                         self.scores["left"] += 2
                         self.increase_speed()
-                        self.shot_sound.play()
+                        #self.shot_sound.play()
                     return

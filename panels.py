@@ -32,7 +32,7 @@ class Panels:
             resume_def()
         return img
 
-    def draw_exit(self, img: cv2.typing.MatLike, img_exit: cv2.typing.MatLike, pos_x, pos_y, restart_def, resume_def, now, text) -> cv2.typing.MatLike:
+    def draw_panel(self, img: cv2.typing.MatLike, img_exit: cv2.typing.MatLike, pos_x, pos_y, restart_def, resume_def, now, text, time_left) -> cv2.typing.MatLike:
         # 720, 1280 - 360, 640
         menu_w, menu_h = img_exit.shape[1], img_exit.shape[0]
         target_w, target_h = img.shape[1], img.shape[0]
@@ -52,8 +52,12 @@ class Panels:
             restart_def()
             now()
         elif bt_x3 < pos_x < bt_x4 and bt_y1 < pos_y < bt_y2:
-            print("Devam Et")
-            resume_def()
+            print(f"Devam Et{time_left}")
+            if time_left <= 0:
+                restart_def()
+                now()
+            else:
+                resume_def()
 
         return img
 

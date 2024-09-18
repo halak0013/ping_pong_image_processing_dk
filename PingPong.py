@@ -133,21 +133,27 @@ class PingPong:
                     font, font_scale, (255, 100, 100), thickness)
         return img
 
-    def reset_time(self):
+    def reset(self):
         self.now = time.time()
         self.hand_free_time = 0
         self.scores = {"left": 0, "right": 0}
         self.is_hand_free = False
+    def resume(self):
+        #self.now = time.time()
+        self.hand_free_time = 0
+        self.is_hand_free = False
+        self.ball.resume()
 
     def draw_time(self, img: cv2.typing.MatLike) -> cv2.typing.MatLike:
         time_left = self.game_time - (time.time() - self.now)
         if self.hand_free_time > 100:
-            self.is_hand_free =True
+            self.is_hand_free = True
         if time_left <= 0 or self.is_hand_free:
             self.ball.pause()
-            img = self.panel.draw_exit(img, self.img_menu, self.hx, self.hy,
-                                       self.ball.restart, self.ball.resume, self.reset_time,
-                                       "Süre Bitti\nTekrar Başlamak İçin Butona Elinizi getirin")
+            img = self.panel.draw_panel(img, self.img_menu, self.hx, self.hy,
+                                       self.ball.restart, self.resume, self.reset,
+                                       "Tekrar Başlamak İçin Butona Elinizi getirin", time_left)
+        if time_left <= 0:
             time_left = 0
         font = cv2.FONT_HERSHEY_SCRIPT_COMPLEX
         font_scale = 1
@@ -195,8 +201,7 @@ class PingPong:
     def run(self):
         print("running")
         while True:
-            #success, img = self.cap.read()
-            success, img = self.get_img("c")
+            success, img = self.get_img("camera")
             if not success:
                 print("Failed to read from camera")
                 break
