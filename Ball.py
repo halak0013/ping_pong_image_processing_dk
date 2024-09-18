@@ -31,8 +31,8 @@ class Ball:
     def restart(self):
         self.x = self.init_pos[0]
         self.y = self.init_pos[1]
-        #self.dx = self.speed * self.sing_x
-        #self.dy = self.speed * self.sing_y
+        self.dx = self.speed * self.sing_x
+        self.dy = self.speed * self.sing_y
         
     def resume(self):
         self.dx = self.speed * self.sing_x

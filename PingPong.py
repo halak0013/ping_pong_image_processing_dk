@@ -72,7 +72,7 @@ class PingPong:
         self.sock_server = SocketServer()
         self.image_receiver = ImageReceiver(self.sock_server)
 
-        self.game_time =120
+        self.game_time = 120
         self.obs_time = 15
         self.now = time.time()
         self.hand_free_time = 0
