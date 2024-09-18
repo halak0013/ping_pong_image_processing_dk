@@ -163,7 +163,7 @@ class PingPong:
         (text_width, text_height), baseline = cv2.getTextSize(
             text, font, font_scale, thickness)
         x = (self.target_width // 2) - (text_width // 2)
-        y = (text_height + baseline) + self.boundries["top"] + 200
+        y = (text_height + baseline) + self.boundries["top"] + 100
         cv2.putText(img, text, (x, y), font, font_scale, font_color, thickness)
 
         return img
