@@ -1,6 +1,7 @@
 import cv2
 import cvzone
-
+import pygame
+import numpy as np
 # https://happycoding.io/tutorials/processing/collision-detection#collision-detection-between-many-objects
 
 
@@ -22,11 +23,16 @@ class Ball:
 
         self.scores = scores
 
+        pygame.mixer.init()
+
+        self.shot_sound = pygame.mixer.Sound("resources/shot.wav")
+        self.fail_sound = pygame.mixer.Sound("resources/fail.wav")
+
     def restart(self):
         self.x = self.init_pos[0]
         self.y = self.init_pos[1]
-        self.dx = self.speed * self.sing_x
-        self.dy = self.speed * self.sing_y
+        #self.dx = self.speed * self.sing_x
+        #self.dy = self.speed * self.sing_y
         
     def resume(self):
         self.dx = self.speed * self.sing_x
@@ -42,7 +48,7 @@ class Ball:
         right = bounding_box["right"]
         left = bounding_box["left"]
 
-        #print(f"Ball: {self.x}, {self.y} speed: {self.dx}, {self.dy}")
+        print(f"Ball: {self.x}, {self.y} speed: {self.dx}, {self.dy}")
         # Sağ ve sol çarpışma kontrolü
         if self.x + self.radius + self.dx > left and self.x + self.dx < right:
             if self.y + self.radius > top and self.y < bottom:
@@ -68,8 +74,6 @@ class Ball:
     def move(self, img: cv2.typing.MatLike, collisions: list[dict[str, dict[str, int]]]):
         self.sing_x = 1 if self.dx > 0 else -1  # Hareket yönünü belirle
         self.sing_y = 1 if self.dy > 0 else -1  # Hareket yönünü belirle
-        cv2.putText(img, str(f"{self.x}, {self.y}"), (self.init_pos[0], 200),
-                    cv2.FONT_HERSHEY_PLAIN, 2, (0, 200, 0), 1)
 
         for i in range(abs(self.dx)):
             # TODO: Keep all collsion on np matris
@@ -85,15 +89,19 @@ class Ball:
                     if key == "right":
                         self.scores["right"] -= 2
                         self.scores["left"] += 1
+                        self.fail_sound.play()
                         self.restart()
                     elif key == "left":
                         self.scores["left"] -= 2
                         self.scores["right"] += 1
+                        self.fail_sound.play()
                         self.restart()
                     elif key == "right_bat":
                         self.scores["right"] += 2
                         self.increase_speed()
+                        self.shot_sound.play()
                     elif key == "left_bat":
                         self.scores["left"] += 2
                         self.increase_speed()
+                        self.shot_sound.play()
                     return

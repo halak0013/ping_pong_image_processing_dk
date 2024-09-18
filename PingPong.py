@@ -1,9 +1,8 @@
-# Bismillahirnirahim
+# Bismillahirrahmanirrahim
 
 import random
 import cv2
 import cvzone.HandTrackingModule as htm
-import pygame
 from dk_connection import ImageReceiver, SocketServer
 import Collision
 import Ball
@@ -34,11 +33,6 @@ class PingPong:
             "resources/menu.png", cv2.IMREAD_UNCHANGED), 640, 360)
         self.img_obstacle = self.resize_img(cv2.imread(
             "resources/engel.png", cv2.IMREAD_UNCHANGED), 75, 75)
-
-        pygame.mixer.init()
-
-        self.shot_sound = pygame.mixer.Sound("resources/shot.wav")
-        self.fail_sound = pygame.mixer.Sound("resources/fail.wav")
 
         self.detector = htm.HandDetector(
             maxHands=self.max_hands, detectionCon=self.detection_confidence)
@@ -78,7 +72,7 @@ class PingPong:
         self.sock_server = SocketServer()
         self.image_receiver = ImageReceiver(self.sock_server)
 
-        self.game_time = 120
+        self.game_time =120
         self.obs_time = 15
         self.now = time.time()
         self.hand_free_time = 0
@@ -114,15 +108,14 @@ class PingPong:
                     img = cv2.circle(img, (x2, y2), 9, (0, 0, 255), cv2.FILLED)
         else:
             self.hand_free_time += 1
-            print("Hand free time: ", self.hand_free_time)
         return img
 
     def draw_score(self, img: cv2.typing.MatLike):
         space = 100
-        text = f"Left: {self.scores['left']}"
+        text = f"Oyuncu 2: {self.scores['left']}"
         font = cv2.FONT_HERSHEY_SCRIPT_COMPLEX
         font_scale = 1
-        font_color = (255, 0, 0)
+        font_color = (100, 100, 255)
         thickness = 1
         # Yazının boyutunu hesapla
         (text_width, text_height), baseline = cv2.getTextSize(
@@ -135,13 +128,14 @@ class PingPong:
 
         cv2.putText(img, text, (x, y), font, font_scale, font_color, thickness)
 
-        cv2.putText(img, f"Right: {self.scores['right']}", (self.target_width//2 + space, y),
-                    font, font_scale, (0, 0, 255), thickness)
+        cv2.putText(img, f"Oyuncu 1: {self.scores['right']}", (self.target_width//2 + space, y),
+                    font, font_scale, (255, 100, 100), thickness)
         return img
 
     def reset_time(self):
         self.now = time.time()
         self.hand_free_time = 0
+        self.scores = {"left": 0, "right": 0}
 
     def draw_time(self, img: cv2.typing.MatLike) -> cv2.typing.MatLike:
         time_left = self.game_time - (time.time() - self.now)
@@ -155,7 +149,7 @@ class PingPong:
         font_scale = 1
         font_color = (0, 255, 0)
         thickness = 1
-        text = f"Time: {int(time_left)}"
+        text = f"Zaman: {int(time_left)}"
         (text_width, text_height), baseline = cv2.getTextSize(
             text, font, font_scale, thickness)
         x = (self.target_width // 2) - (text_width // 2)
@@ -182,18 +176,23 @@ class PingPong:
         img = self.draw_hand_pose(img, hands)
         for obj in self.objects.values():
             img = obj.draw(img, obj.x, obj.y)
-        self.ball.move(img, self.collisions)
+            
+        n = time.time() - self.now
+        if n > 5:
+            self.ball.move(img, self.collisions)
+        else:
+            img = self.panel.utf8_text(img, f"Başlamak lütfen için elinizi getiriniz: {int(5 - n)}", 
+                                       self.target_width//4, self.target_height//2, (0,255,100))
         self.draw_obstacle()
         img = self.draw_score(img)
         img = self.draw_time(img)
-
         return img
 
     def run(self):
         print("running")
         while True:
             #success, img = self.cap.read()
-            success, img = self.get_img("sock")
+            success, img = self.get_img("c")
             if not success:
                 print("Failed to read from camera")
                 break
@@ -203,7 +202,9 @@ class PingPong:
 
             img = self.draw_components(img, hands)
 
-            cv2.imshow("Image", img)
+            #cv2.namedWindow('Dk Ping Pong', cv2.WINDOW_NORMAL)
+            #cv2.moveWindow("Dk Ping Pong", 1920//2, 1080//2)
+            cv2.imshow("Dk Ping Pong", img)
             if cv2.waitKey(5) & 0xFF == 27:  # ord('q')
                 break
         self.cap.release()

@@ -26,7 +26,7 @@ class Collision:
 
     def empty_image(self, width, height):
         white_image = np.ones((self.height, self.width, 4), dtype=np.uint8)  * 255 # 255, beyaz rengi temsil eder
-        white_image[..., 3] = 120  # Alpha kanalı tamamen saydam
+        white_image[..., 3] = 0  # Alpha kanalı tamamen saydam
         return white_image
 
 
