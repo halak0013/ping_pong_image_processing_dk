@@ -11,15 +11,20 @@ import time
 
 
 class PingPong:
-    def __init__(self, target_width=1080, target_height=720, detection_confidence=0.40, max_hands=2) -> None:
+    def __init__(self, target_width=1920, target_height=1080, detection_confidence=0.40, max_hands=2, source="camera") -> None:
         self.target_width = target_width
         self.target_height = target_height
         self.detection_confidence = detection_confidence
         self.max_hands = max_hands
+        self.source = source
 
-        self.cap = cv2.VideoCapture(0)
-        self.cap.set(3, self.target_width)
-        self.cap.set(4, self.target_height)
+        if source == "camera":
+            self.cap = cv2.VideoCapture(0)
+            self.cap.set(3, self.target_width)
+            self.cap.set(4, self.target_height)
+        else:
+            self.sock_server = SocketServer()
+            self.image_receiver = ImageReceiver(self.sock_server)
 
         self.img_background = self.resize_img(cv2.imread(
             "resources/background.png"), self.target_width, self.target_height)
@@ -38,7 +43,7 @@ class PingPong:
             maxHands=self.max_hands, detectionCon=self.detection_confidence)
 
         bl, bu = 50, 60
-        self.boundries = {
+        self.boundaries = {
             "left": bl,
             "right": self.target_width - bl,
             "top": bu,
@@ -69,9 +74,6 @@ class PingPong:
                                               self.target_height//2), self.scores)
         self.panel = panels.Panels()
 
-        self.sock_server = SocketServer()
-        self.image_receiver = ImageReceiver(self.sock_server)
-
         self.game_time = 120
         self.obs_time = 15
         self.now = time.time()
@@ -81,15 +83,15 @@ class PingPong:
     def resize_img(self, img: cv2.typing.MatLike, width, height):
         return cv2.resize(img, (width, height))
 
-    def get_img(self, source="camera"):
+    def get_img(self):
         img = None
-        succes = None
-        if source == "sock":
+        success = None
+        if self.source == "sock":
             img = self.image_receiver.get_image()
-            succes = img is not None
+            success = img is not None
         else:
-            succes, img = self.cap.read()
-        return succes, img
+            success, img = self.cap.read()
+        return success, img
 
     def draw_hand_pose(self, img: cv2.typing.MatLike, hands: list):
         if hands:
@@ -101,11 +103,11 @@ class PingPong:
                 # TODO: renk tespiti ile raket de yapılabilir
                 if hand["type"] == "Right" and x2 > self.target_width//2:
                     img = self.bats["right_bat"].draw(
-                        img=img, x=x2, y=y2, bound_x=self.boundries["right"] - 20)
+                        img=img, x=x2, y=y2, bound_x=self.boundaries["right"] - 20)
                     img = cv2.circle(img, (x2, y2), 9, (255, 0, 0), cv2.FILLED)
                 elif hand["type"] == "Left" and x2 < self.target_width//2:
                     img = self.bats["left_bat"].draw(
-                        img=img, x=x2, y=y2, bound_x=self.boundries["left"] + 20)
+                        img=img, x=x2, y=y2, bound_x=self.boundaries["left"] + 20)
                     img = cv2.circle(img, (x2, y2), 9, (0, 0, 255), cv2.FILLED)
         else:
             self.hand_free_time += 1
@@ -125,7 +127,7 @@ class PingPong:
         # Yazıyı yerleştirmek için dinamik bir konum belirle
         x = (self.target_width // 2) - (text_width)
         # Y ekseninde biraz boşluk bırak
-        y = (text_height + baseline) + self.boundries["top"]
+        y = (text_height + baseline) + self.boundaries["top"]
 
         cv2.putText(img, text, (x, y), font, font_scale, font_color, thickness)
 
@@ -136,7 +138,8 @@ class PingPong:
     def reset(self):
         self.now = time.time()
         self.hand_free_time = 0
-        self.scores = {"left": 0, "right": 0}
+        self.scores["left"] = 0
+        self.scores["right"] = 0
         self.is_hand_free = False
     def resume(self):
         #self.now = time.time()
@@ -163,7 +166,7 @@ class PingPong:
         (text_width, text_height), baseline = cv2.getTextSize(
             text, font, font_scale, thickness)
         x = (self.target_width // 2) - (text_width // 2)
-        y = (text_height + baseline) + self.boundries["top"] + 100
+        y = (text_height + baseline) + self.boundaries["top"] + 100
         cv2.putText(img, text, (x, y), font, font_scale, font_color, thickness)
 
         return img
@@ -181,7 +184,7 @@ class PingPong:
 
     def draw_components(self, img: cv2.typing.MatLike, hands: list):
         img = cv2.addWeighted(
-            img, alpha=0.2, src2=self.img_background, beta=1, gamma=0)
+            img, alpha=0.1, src2=self.img_background, beta=0.9, gamma=0)
 
         img = self.draw_hand_pose(img, hands)
         for obj in self.objects.values():
@@ -201,7 +204,7 @@ class PingPong:
     def run(self):
         print("running")
         while True:
-            success, img = self.get_img("camera")
+            success, img = self.get_img()
             if not success:
                 print("Failed to read from camera")
                 break
@@ -211,8 +214,6 @@ class PingPong:
 
             img = self.draw_components(img, hands)
 
-            #cv2.namedWindow('Dk Ping Pong', cv2.WINDOW_NORMAL)
-            #cv2.moveWindow("Dk Ping Pong", 1920//2, 1080//2)
             cv2.imshow("Dk Ping Pong", img)
             if cv2.waitKey(5) & 0xFF == 27:  # ord('q')
                 break
@@ -221,5 +222,5 @@ class PingPong:
 
 
 if __name__ == "__main__":
-    app = PingPong()
+    app = PingPong(source="camera") # source="sock" , "camera"
     app.run()
