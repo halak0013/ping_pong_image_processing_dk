@@ -81,11 +81,11 @@ class Ball:
                         self.fail_sound.play()
                         self.restart()
                     elif key == "right_bat":
-                        self.scores["right"] += 2
+                        # self.scores["right"] += 2
                         self.increase_speed()
                         self.shot_sound.play()
                     elif key == "left_bat":
-                        self.scores["left"] += 2
+                        # self.scores["left"] += 2
                         self.increase_speed()
                         self.shot_sound.play()
                     return
