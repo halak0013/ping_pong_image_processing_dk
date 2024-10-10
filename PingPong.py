@@ -38,6 +38,11 @@ class PingPong:
             "resources/menu.png", cv2.IMREAD_UNCHANGED), 640, 360)
         self.img_obstacle = self.resize_img(cv2.imread(
             "resources/engel.png", cv2.IMREAD_UNCHANGED), 75, 75)
+        
+        self.o1_x = random.randint(100, self.target_width-100)
+        self.o1_y = random.randint(100, self.target_height-100)
+        self.o2_x = random.randint(100, self.target_width-100)
+        self.o2_y = random.randint(100, self.target_height-100)
 
         self.detector = htm.HandDetector(
             maxHands=self.max_hands, detectionCon=self.detection_confidence)
@@ -184,7 +189,7 @@ class PingPong:
 
     def draw_components(self, img: cv2.typing.MatLike, hands: list):
         img = cv2.addWeighted(
-            img, alpha=0.1, src2=self.img_background, beta=0.9, gamma=0)
+            img, alpha=0.3, src2=self.img_background, beta=0.9, gamma=0)
 
         img = self.draw_hand_pose(img, hands)
         for obj in self.objects.values():
@@ -217,7 +222,6 @@ class PingPong:
             cv2.imshow("Dk Ping Pong", img)
             if cv2.waitKey(5) & 0xFF == 27:  # ord('q')
                 break
-        self.cap.release()
         cv2.destroyAllWindows()
 
 
